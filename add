@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Web Proxy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; }
+        input, button { padding: 10px; margin: 5px; width: 80%; }
+        #status { margin-top: 20px; padding: 10px; border-radius: 5px; display: none; }
+        .loading { background: #fff3cd; }
+        .success { background: #d1e7dd; }
+        .error { background: #f8d7da; }
+    </style>
+</head>
+<body>
+    <h2>Web Proxy via GitHub</h2>
+    <input type="text" id="urlInput" placeholder="https://example.com">
+    <button onclick="fetchViaProxy()">Open via Proxy</button>
+    <div id="status"></div>
+    <iframe id="siteFrame" style="width: 100%; height: 600px; border: 1px solid #ccc; margin-top: 20px; display: none;"></iframe>
+
+    <script>
+    let currentProxy = 'https://cors-anywhere.herokuapp.com/';
+
+    function showStatus(text, type) {
+        const statusEl = document.getElementById('status');
+        statusEl.textContent = text;
+        statusEl.className = type;
+        statusEl.style.display = 'block';
+    }
+
+    async function fetchViaProxy() {
+        const url = document.getElementById('urlInput').value.trim();
+        if (!url) return;
+
+        showStatus('Loading proxy test...', 'loading');
+
+        try {
+            // Тестируем основной CORS-прокси
+            const testUrl = currentProxy + 'https://httpbin.org/ip';
+            const testRes = await fetch(testUrl);
+
+            if (testRes.ok) {
+                showStatus('Proxy is active. Loading site...', 'success');
+                await loadSite(url);
+            } else {
+                throw new Error('Proxy not responding');
+            }
+        } catch (error) {
+            showStatus(`Main proxy failed. Trying backup method...`, 'error');
+            // Используем резервный метод
+            loadSiteBackup(url);
+        }
+    }
+
+    async function loadSite(targetUrl) {
+        try {
+            const proxyUrl = currentProxy + targetUrl;
+            const response = await fetch(proxyUrl);
+            const html = await response.text();
+
+            // Открываем контент в iframe
+            const frame = document.getElementById('siteFrame');
+            frame.srcdoc = html;
+            frame.style.display = 'block';
+            showStatus('Site loaded in frame below.', 'success');
+        } catch (err) {
+            showStatus('Failed to load site via proxy: ' + err.message, 'error');
+        }
+    }
+
+    function loadSiteBackup(targetUrl) {
+        showStatus('Using iframe backup method (some sites may block this)...', 'loading');
+        const frame = document.getElementById('siteFrame');
+        frame.src = targetUrl;
+        frame.style.display = 'block';
+    }
+    </script>
+</body>
+</html>
